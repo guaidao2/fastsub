@@ -42,11 +42,14 @@ type Host struct {
 	IPs []string `json:"ips,omitempty"`
 	// CNAME is the canonical name when one was followed.
 	CNAME string `json:"cname,omitempty"`
-	// Wildcard is true when this name only resolved because the zone answers
-	// every name under it. Such a result is not evidence that the name exists.
-	Wildcard bool `json:"wildcard,omitempty"`
-	// Alive is true when at least one URL answered.
-	Alive bool `json:"alive,omitempty"`
+	// Wildcard records whether the name resolved only because the zone answers
+	// every name under it. Nil means the check never ran — with --only-passive
+	// nothing is resolved at all — and that is a different claim from "checked,
+	// and it was not a wildcard".
+	Wildcard *bool `json:"wildcard,omitempty"`
+	// Alive records whether anything answered over HTTP. Nil means no probe was
+	// made, which is not the same claim as "probed, and nothing answered".
+	Alive *bool `json:"alive,omitempty"`
 	// URLs are the endpoints that answered, in probe order.
 	URLs []URL `json:"urls,omitempty"`
 }
@@ -81,12 +84,19 @@ func NewSummary(hosts []Host, elapsed float64) Summary {
 		ElapsedSeconds: elapsed,
 	}
 	for _, h := range hosts {
-		if h.Alive {
+		if Measured(h.Alive) {
 			s.Alive++
 		}
-		if h.Wildcard {
+		if Measured(h.Wildcard) {
 			s.Wildcard++
 		}
 	}
 	return s
 }
+
+// Bool returns a pointer to b. It is how a field that tells "measured, and the
+// answer was no" apart from "never measured" gets set.
+func Bool(b bool) *bool { return &b }
+
+// Measured reports whether a tri-state flag was both set and true.
+func Measured(v *bool) bool { return v != nil && *v }

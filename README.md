@@ -32,9 +32,11 @@ plugs into.
 - **The wildcard check is not optional.** A zone that answers `*.example.com`
   makes every wordlist entry resolve. fastsub tests for it before it judges any
   name, and reports what a wordlist invented as what it is.
-- **A guess is labelled as a guess.** A name from a certificate, a name from a
-  wordlist and a name from a crawl are not the same evidence, and the output
-  says which is which.
+- **A guess is labelled as a guess.** The `sources` field on every record says
+  where a name came from — `crtsh`, `urlscan`, `brute`, `mutate`, `certificate`
+  — because a name a wordlist invented is not the same thing as a name a
+  certificate was issued for, and a reader should not have to guess which one
+  they are looking at.
 - **No platform.** No database, no web UI, no daemon. An asset system that
   schedules scans belongs in its own program; fastsub's job is to be a command
   with a stable interface for it to call.
@@ -255,6 +257,11 @@ One record per host, then one summary line:
 Fields are added to, never renamed. `schema` names the version so a consumer can
 refuse one it does not understand instead of guessing.
 
+A field is **absent when it was never measured**, and that is deliberate:
+`alive` is missing from a run that did not probe rather than `false`, because
+"nobody looked" and "looked, and the answer was no" are different claims. `-f
+csv` follows the same rule and leaves the cell empty.
+
 ### Reporting only what is new
 
 ```sh
@@ -267,6 +274,11 @@ anything is resolved, so a scheduled run costs queries only for what is new. The
 snapshot can be any of fastsub's own formats — JSONL, JSON, CSV, a plain list,
 even `-v` text output — because the format is detected from the content rather
 than the file name. There is no database: a snapshot is a file.
+
+One caveat for scheduled runs: some sources are not stable. `subdomaincenter`
+returns a different set on every request for the same domain, so diffing against
+it reports the dataset's churn as new findings. Leave it out (`--exclude-sources
+subdomaincenter`) when the comparison is meant to be about the target.
 
 ## Working with other tools
 

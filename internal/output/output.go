@@ -138,7 +138,7 @@ func (p *Printer) writeText(h model.Host) {
 	if len(h.IPs) > 0 {
 		b.WriteString("  " + strings.Join(h.IPs, ","))
 	}
-	if h.Wildcard {
+	if model.Measured(h.Wildcard) {
 		b.WriteString("  [wildcard]")
 	}
 	for _, u := range h.URLs {
@@ -211,8 +211,8 @@ func (p *Printer) writeCSVRow(h model.Host, u model.URL) {
 		strings.Join(h.IPs, " "),
 		h.CNAME,
 		strings.Join(h.Sources, " "),
-		strconv.FormatBool(h.Wildcard),
-		strconv.FormatBool(h.Alive),
+		boolString(h.Wildcard),
+		boolString(h.Alive),
 		u.URL,
 		u.Scheme,
 		portString(u.Port),
@@ -269,4 +269,14 @@ func faviconString(hash int32) string {
 		return ""
 	}
 	return strconv.FormatInt(int64(hash), 10)
+}
+
+// boolString leaves a value that was never measured empty. Writing "false" for
+// an unmeasured field is an assertion nothing checked — a --only-passive run
+// would claim every name is not a wildcard, when no wildcard check was made.
+func boolString(v *bool) string {
+	if v == nil {
+		return ""
+	}
+	return strconv.FormatBool(*v)
 }

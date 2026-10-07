@@ -251,20 +251,24 @@ func (p *Pipeline) enumerate(ctx context.Context, domain string, out Sink) ([]mo
 	if p.opts.Resolver == nil {
 		return nil, errors.New("no resolver configured")
 	}
-	wildcard, err := p.opts.Resolver.DetectWildcard(ctx, domain)
-	if err != nil {
-		p.logf("log.wildcard_check_failed", domain, err)
+	wildcard, wcErr := p.opts.Resolver.DetectWildcard(ctx, domain)
+	// Only a check that actually completed can be recorded as a verdict. A
+	// check that failed leaves every name's wildcard field unset, which is what
+	// "nobody looked" means.
+	wildcardChecked := wcErr == nil
+	if wcErr != nil {
+		p.logf("log.wildcard_check_failed", domain, wcErr)
 	}
 	if wildcard != nil {
 		p.logf("log.wildcard", domain, len(wildcard.IPs))
 	}
 
-	hosts := p.resolveAll(ctx, domain, reported, wildcard)
+	hosts := p.resolveAll(ctx, domain, reported, wildcard, wildcardChecked)
 
 	if p.opts.Prober != nil {
 		sans := p.probeAll(ctx, hosts)
 		if p.opts.CertSAN && len(sans) > 0 {
-			hosts = append(hosts, p.adoptSANs(ctx, domain, sans, reported, wildcard)...)
+			hosts = append(hosts, p.adoptSANs(ctx, domain, sans, reported, wildcard, wildcardChecked)...)
 		}
 	}
 
@@ -274,7 +278,7 @@ func (p *Pipeline) enumerate(ctx context.Context, domain string, out Sink) ([]mo
 		// A wildcard-sourced name is not evidence that the name exists, and a
 		// probe does not change that: the wildcard answers the probe too, which
 		// is exactly how a zone would produce hundreds of live-looking hosts.
-		if h.Wildcard && p.opts.WildcardFilter {
+		if model.Measured(h.Wildcard) && p.opts.WildcardFilter {
 			dropped++
 			continue
 		}
@@ -368,7 +372,7 @@ func (p *Pipeline) probeAll(ctx context.Context, hosts []model.Host) []string {
 			defer wg.Done()
 			res := p.opts.Prober.Probe(ctx, hosts[i].Host)
 			hosts[i].URLs = res.URLs
-			hosts[i].Alive = res.Alive()
+			hosts[i].Alive = model.Bool(res.Alive())
 
 			if len(res.SANs) > 0 {
 				mu.Lock()
@@ -381,7 +385,7 @@ func (p *Pipeline) probeAll(ctx context.Context, hosts []model.Host) []string {
 
 	alive := 0
 	for _, h := range hosts {
-		if h.Alive {
+		if model.Measured(h.Alive) {
 			alive++
 		}
 	}
@@ -392,7 +396,7 @@ func (p *Pipeline) probeAll(ctx context.Context, hosts []model.Host) []string {
 // adoptSANs resolves the names a certificate carried. It is one extra pass, not
 // a loop: a new name can bring a new certificate, and following that to its end
 // is how an enumeration walks off the edge into someone else's domain.
-func (p *Pipeline) adoptSANs(ctx context.Context, domain string, sans []string, reported map[string]map[string]bool, wildcard *resolve.Wildcard) []model.Host {
+func (p *Pipeline) adoptSANs(ctx context.Context, domain string, sans []string, reported map[string]map[string]bool, wildcard *resolve.Wildcard, wildcardChecked bool) []model.Host {
 	fresh := make(map[string]map[string]bool)
 
 	for _, raw := range sans {
@@ -424,7 +428,7 @@ func (p *Pipeline) adoptSANs(ctx context.Context, domain string, sans []string, 
 	for name, sources := range fresh {
 		reported[name] = sources
 	}
-	return p.resolveAll(ctx, domain, fresh, wildcard)
+	return p.resolveAll(ctx, domain, fresh, wildcard, wildcardChecked)
 }
 
 // emitPassive writes the raw list, sorted, with the sources that named each
@@ -503,7 +507,10 @@ func (p *Pipeline) querySources(ctx context.Context, domain string) map[string]m
 // resolveAll resolves every reported name in parallel. A name that does not
 // resolve is not evidence that it exists, so it is left out of the result set
 // and mentioned on the progress stream instead.
-func (p *Pipeline) resolveAll(ctx context.Context, domain string, reported map[string]map[string]bool, wildcard *resolve.Wildcard) []model.Host {
+//
+// wildcardChecked says whether the wildcard verdict is real: when the check
+// never completed, no name gets a wildcard field rather than a false one.
+func (p *Pipeline) resolveAll(ctx context.Context, domain string, reported map[string]map[string]bool, wildcard *resolve.Wildcard, wildcardChecked bool) []model.Host {
 	names := sortedKeys(reported)
 	hosts := make([]model.Host, len(names))
 	resolved := make([]bool, len(names))
@@ -537,8 +544,8 @@ func (p *Pipeline) resolveAll(ctx context.Context, domain string, reported map[s
 				IPs:     res.IPs,
 				CNAME:   res.CNAME,
 			}
-			if wildcard.Covers(res) {
-				h.Wildcard = true
+			if wildcardChecked {
+				h.Wildcard = model.Bool(wildcard.Covers(res))
 			}
 			hosts[i] = h
 			resolved[i] = true

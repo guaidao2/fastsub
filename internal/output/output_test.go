@@ -16,12 +16,12 @@ func sampleHosts() []model.Host {
 			Sources: []string{"crtsh", "urlscan"},
 			IPs:     []string{"1.2.3.4"},
 			CNAME:   "lb.example.net",
-			Alive:   true,
+			Alive:   model.Bool(true),
 			URLs: []model.URL{
 				{URL: "https://a.example.com/", Scheme: "https", Port: 443, StatusCode: 200, Title: "Example", Server: "nginx"},
 			},
 		},
-		{Host: "b.example.com", Sources: []string{"crtsh"}, Wildcard: true},
+		{Host: "b.example.com", Sources: []string{"crtsh"}, Wildcard: model.Bool(true)},
 	}
 }
 

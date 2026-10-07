@@ -93,10 +93,11 @@ var en = map[string]string{
 
 	// Errors.
 	"error.unknown_flag":      "unknown option %q",
+	"error.did_you_mean":      "unknown option %s; did you mean %s?",
 	"error.bad_bool":          "option %s needs true or false, got %q",
 	"error.missing_value":     "option %s needs a value",
 	"error.invalid_lang":      "unknown language %q; available: %s",
-	"error.no_target":         "no target given; pass -d <domain>, a domain argument, or -iL <file>",
+	"error.no_target":         "no target given; pass -d <domain>, a domain argument, or -dL <file>",
 	"error.bad_format":        "unknown output format %q; use text, json, jsonl, csv or url",
 	"error.bad_int":           "option %s needs a whole number, got %q",
 	"error.bad_duration":      "option %s needs a duration such as 5s or 500ms, got %q",

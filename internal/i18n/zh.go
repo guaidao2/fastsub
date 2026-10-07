@@ -90,10 +90,11 @@ var zh = map[string]string{
 
 	// Errors.
 	"error.unknown_flag":      "未知选项 %q",
+	"error.did_you_mean":      "未知选项 %s；你是想用 %s 吗？",
 	"error.bad_bool":          "选项 %s 需要 true 或 false，收到 %q",
 	"error.missing_value":     "选项 %s 需要一个值",
 	"error.invalid_lang":      "未知语言 %q；可用：%s",
-	"error.no_target":         "没有给定目标；请用 -d <域名>、直接给域名参数，或 -iL <文件>",
+	"error.no_target":         "没有给定目标；请用 -d <域名>、直接给域名参数，或 -dL <文件>",
 	"error.bad_format":        "未知输出格式 %q；可用 text、json、jsonl、csv 或 url",
 	"error.bad_int":           "选项 %s 需要整数，收到 %q",
 	"error.bad_duration":      "选项 %s 需要 5s 或 500ms 这样的时长，收到 %q",

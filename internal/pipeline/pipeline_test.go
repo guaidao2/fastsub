@@ -104,7 +104,7 @@ func TestAdoptSANsTakesOnlyUsableNames(t *testing.T) {
 		"api.example.com.",     // the same name with a dot
 		"other.net",            // outside the domain
 		"deep.api.example.com", // also new
-	}, reported, nil)
+	}, reported, nil, true)
 
 	got := make([]string, 0, len(hosts))
 	for _, h := range hosts {

@@ -153,9 +153,17 @@ func (fs *FlagSet) Parse(args []string) error {
 // is --output-json rather than -o with the value "J".
 func (fs *FlagSet) parseShort(arg string, args []string, i *int) error {
 	body := arg[1:]
+
+	// A long option spelled with one dash is a common slip — -version, -help.
+	// Catching it here also stops the greedy short-name match from eating the
+	// first letter and reporting only the leftover fragment.
+	if _, ok := fs.byLong[body]; ok {
+		return fs.errf("error.did_you_mean", arg, "--"+body)
+	}
+
 	key, d := fs.longestMatch(body)
 	if d == nil {
-		return fs.errf("error.unknown_flag", "--"+body)
+		return fs.errf("error.unknown_flag", arg)
 	}
 	rest := body[len(key):]
 

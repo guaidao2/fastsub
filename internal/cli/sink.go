@@ -85,8 +85,10 @@ func buildSink(fs *FlagSet, format output.Format, stdout io.Writer) (*sink, erro
 			format output.Format
 		}{
 			{".txt", output.Text},
+			{".json", output.JSON},
 			{".jsonl", output.JSONL},
 			{".csv", output.CSV},
+			{".url", output.URL},
 		} {
 			if err := add(base+target.suffix, target.format); err != nil {
 				return nil, err
