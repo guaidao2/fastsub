@@ -21,7 +21,7 @@ const (
 
 // Version is the release version. It is a variable rather than a constant so a
 // release build can set it with -ldflags "-X .../internal/version.Version=v1.0.0".
-var Version = "1.0.0"
+var Version = "1.0.1"
 
 // Line is the one-line identity printed at the top of help output and by
 // --version.
